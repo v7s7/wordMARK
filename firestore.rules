@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── DUELS ─────────────────────────────────────────────────────────────────
+    match /duels/{duelId} {
+      // Anyone authenticated can read a duel (needed to join by code search)
+      allow read: if request.auth != null;
+
+      // Only the host can create a duel
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.hostId;
+
+      // Host or guest can update (add guesses, complete the duel)
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.hostId
+            || request.auth.uid == resource.data.guestId
+            // Allow guest to set guestId when joining
+            || (resource.data.guestId == null
+                && request.auth.uid == request.resource.data.guestId));
+
+      allow delete: if false;
+    }
+
+    // ── USERS ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId;
+
+      match /puzzles/{puzzleId} {
+        allow read, write: if request.auth != null
+          && request.auth.uid == userId;
+      }
+    }
+
+    // ── DAILY COMPLETIONS ─────────────────────────────────────────────────────
+    match /daily_completions/{docId} {
+      // Users can only read/write their own completion records
+      allow read, write: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+  }
+}
