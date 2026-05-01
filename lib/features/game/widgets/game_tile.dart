@@ -26,7 +26,7 @@ class GameTile extends StatefulWidget {
 }
 
 class _GameTileState extends State<GameTile>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _flipController;
   late AnimationController _bounceController;
   LetterStatus _displayStatus = LetterStatus.empty;

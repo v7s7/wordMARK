@@ -53,8 +53,11 @@ final router = GoRouter(
       routes: [
         GoRoute(
           path: 'game',
-          pageBuilder: (c, s) =>
-              _slidePage(c, s, GameScreen(config: s.extra as GameConfig)),
+          pageBuilder: (c, s) {
+            final config = s.extra as GameConfig?;
+            if (config == null) return _slidePage(c, s, const DailyScreen());
+            return _slidePage(c, s, GameScreen(config: config));
+          },
         ),
       ],
     ),
@@ -64,8 +67,11 @@ final router = GoRouter(
       routes: [
         GoRoute(
           path: 'game',
-          pageBuilder: (c, s) =>
-              _slidePage(c, s, GameScreen(config: s.extra as GameConfig)),
+          pageBuilder: (c, s) {
+            final config = s.extra as GameConfig?;
+            if (config == null) return _slidePage(c, s, const PracticeSetupScreen());
+            return _slidePage(c, s, GameScreen(config: config));
+          },
         ),
       ],
     ),
@@ -83,8 +89,11 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'play',
-              pageBuilder: (c, s) =>
-                  _slidePage(c, s, GameScreen(config: s.extra as GameConfig)),
+              pageBuilder: (c, s) {
+                final config = s.extra as GameConfig?;
+                if (config == null) return _slidePage(c, s, const PuzzlesScreen());
+                return _slidePage(c, s, GameScreen(config: config));
+              },
             ),
           ],
         ),

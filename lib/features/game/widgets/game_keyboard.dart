@@ -33,8 +33,8 @@ class GameKeyboard extends StatelessWidget {
       builder: (context, constraints) {
         // Scale key sizes to fit available width (max ~500px)
         final availableWidth = constraints.maxWidth.clamp(0.0, 500.0);
-        // 10 keys per row, 9 gaps of 6px → key width
-        final keyWidth = ((availableWidth - 20 - 9 * 6) / 10).clamp(28.0, 44.0);
+        // 10 keys per row, each with 6px padding, 16px outer padding
+        final keyWidth = ((availableWidth - 16 - 10 * 6) / 10).clamp(28.0, 44.0);
         final keyHeight = (keyWidth * 1.5).clamp(44.0, 58.0);
         final wideKeyWidth = (keyWidth * 1.5).clamp(44.0, 66.0);
 
