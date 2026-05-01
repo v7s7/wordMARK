@@ -142,6 +142,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: 'online',
+          redirect: (_, __) => '/classic',
           routes: [
             GoRoute(
               path: 'create',
