@@ -27,6 +27,16 @@ class GameBoard extends StatefulWidget {
 
 class _GameBoardState extends State<GameBoard> {
   int _lastAnimatedRow = -1;
+  // tap-cycle annotations for classic mode: key="row_col", value 0-3
+  // 0=gray(none), 1=red, 2=yellow, 3=green
+  final Map<String, int> _annotations = {};
+
+  static const _annotationColors = [
+    AppColors.absent,          // 0: default gray
+    Color(0xFFE74C3C),         // 1: red
+    AppColors.present,         // 2: yellow
+    AppColors.correct,         // 3: green
+  ];
 
   @override
   void didUpdateWidget(GameBoard oldWidget) {
@@ -85,19 +95,47 @@ class _GameBoardState extends State<GameBoard> {
                   // Tiles
                   ...List.generate(wordLength, (col) {
                     final entry = rowTiles[col];
-                    // In classic mode, submitted tiles all show as gray
-                    final displayStatus = (widget.classicMode && isSubmitted)
-                        ? LetterStatus.absent
-                        : entry.status;
+
+                    // Classic submitted tiles: tappable annotation cycle
+                    if (widget.classicMode && isSubmitted) {
+                      final annotKey = '${row}_$col';
+                      final annot = _annotations[annotKey] ?? 0;
+                      final bgColor = _annotationColors[annot];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                            right: col < wordLength - 1 ? gap : 0),
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _annotations[annotKey] = (annot + 1) % 4;
+                          }),
+                          child: Container(
+                            width: tileSize,
+                            height: tileSize,
+                            color: bgColor,
+                            child: Center(
+                              child: Text(
+                                entry.letter,
+                                style: GoogleFonts.inter(
+                                  fontSize: tileSize * 0.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
                     return Padding(
                       padding: EdgeInsets.only(
                           right: col < wordLength - 1 ? gap : 0),
                       child: GameTile(
                         key: ValueKey('tile_${row}_$col'),
                         letter: entry.letter,
-                        status: displayStatus,
+                        status: entry.status,
                         size: tileSize,
-                        animate: shouldAnimate && !widget.classicMode,
+                        animate: shouldAnimate,
                         animationDelay: col * 100,
                         isDark: widget.isDark,
                       ),

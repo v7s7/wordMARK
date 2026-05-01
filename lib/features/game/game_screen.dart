@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/game_config_model.dart';
 import '../../core/models/game_state_model.dart';
+import '../../core/models/letter_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/firestore_provider.dart';
 import '../../core/providers/game_provider.dart';
@@ -101,6 +102,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         },
       );
     }
+  }
+
+  // Returns all submitted letters marked as "absent" (dark gray) for the classic keyboard
+  Map<String, LetterStatus> _usedLettersState(GameStateModel state) {
+    final result = <String, LetterStatus>{};
+    for (final row in state.board) {
+      for (final entry in row) {
+        if (entry.letter.isNotEmpty &&
+            entry.status != LetterStatus.empty &&
+            entry.status != LetterStatus.tbd) {
+          result[entry.letter] = LetterStatus.absent;
+        }
+      }
+    }
+    return result;
   }
 
   // Handle physical keyboard input (web + desktop)
@@ -207,9 +223,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: GameKeyboard(
-                          // Classic mode: no per-key color hints (would reveal info)
                           keyboardState: widget.config.mode == GameMode.classic
-                              ? {}
+                              ? _usedLettersState(state)
                               : state.keyboardState,
                           isDark: isDark,
                           disabled: state.isFinished,

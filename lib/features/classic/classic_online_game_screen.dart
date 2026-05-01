@@ -68,6 +68,20 @@ class _ClassicOnlineGameScreenState
     return KeyEventResult.ignored;
   }
 
+  Map<String, LetterStatus> _usedLettersState(GameStateModel state) {
+    final result = <String, LetterStatus>{};
+    for (final row in state.board) {
+      for (final entry in row) {
+        if (entry.letter.isNotEmpty &&
+            entry.status != LetterStatus.empty &&
+            entry.status != LetterStatus.tbd) {
+          result[entry.letter] = LetterStatus.absent;
+        }
+      }
+    }
+    return result;
+  }
+
   Future<void> _submitGuess(DuelGameConfig config) async {
     final error =
         await ref.read(duelGameProvider(config).notifier).submitGuess();
@@ -237,7 +251,7 @@ class _ClassicOnlineGameScreenState
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: GameKeyboard(
-                          keyboardState: const {}, // no hints in classic
+                          keyboardState: _usedLettersState(myState),
                           isDark: isDark,
                           disabled: myState.isFinished,
                           onKey: (letter) => ref
