@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/models/letter_model.dart';
@@ -7,7 +6,7 @@ class GameTile extends StatefulWidget {
   final String letter;
   final LetterStatus status;
   final double size;
-  final int animationDelay; // milliseconds
+  final int animationDelay;
   final bool animate;
   final bool isDark;
 
@@ -25,8 +24,7 @@ class GameTile extends StatefulWidget {
   State<GameTile> createState() => _GameTileState();
 }
 
-class _GameTileState extends State<GameTile>
-    with TickerProviderStateMixin {
+class _GameTileState extends State<GameTile> with TickerProviderStateMixin {
   late AnimationController _flipController;
   late AnimationController _bounceController;
   LetterStatus _displayStatus = LetterStatus.empty;
@@ -37,7 +35,7 @@ class _GameTileState extends State<GameTile>
     super.initState();
     _displayStatus = widget.status;
     _flipController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _bounceController = AnimationController(
@@ -50,14 +48,13 @@ class _GameTileState extends State<GameTile>
   void didUpdateWidget(GameTile oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Bounce animation when a new letter is typed
+    // Bounce on key press
     if (widget.status == LetterStatus.tbd &&
         oldWidget.status != LetterStatus.tbd &&
         widget.letter.isNotEmpty) {
       _bounceController.forward(from: 0).then((_) => _bounceController.reverse());
     }
 
-    // Flip animation when row is submitted
     final wasNeutral = oldWidget.status == LetterStatus.empty ||
         oldWidget.status == LetterStatus.tbd;
     final isColored = widget.status == LetterStatus.correct ||
@@ -67,11 +64,7 @@ class _GameTileState extends State<GameTile>
     if (wasNeutral && isColored && widget.animate && !_started) {
       _started = true;
       Future.delayed(Duration(milliseconds: widget.animationDelay), () {
-        if (mounted) {
-          _flipController.forward(from: 0).then((_) {
-            if (mounted) setState(() => _displayStatus = widget.status);
-          });
-        }
+        if (mounted) _flipController.forward(from: 0);
       });
     } else if (!isColored) {
       _started = false;
@@ -144,30 +137,19 @@ class _GameTileState extends State<GameTile>
     return AnimatedBuilder(
       animation: Listenable.merge([_flipController, _bounceController]),
       builder: (context, _) {
-        final flipValue = _flipController.value;
-        final bounceValue = _bounceController.value;
-        final isShowingBack = flipValue > 0.5;
-        final displayStatus = isShowingBack ? widget.status : _displayStatus;
+        final t = _flipController.value;
+        final b = _bounceController.value;
 
-        // Flip transform (rotate around X axis)
-        final angle =
-            isShowingBack ? (flipValue - 1) * pi : flipValue * pi;
-
-        // Bounce scale (slight grow on key press)
-        final scale = 1.0 + (bounceValue * 0.1);
+        // ScaleY: collapse first half (1→0), reveal second half (0→1)
+        // Color/content swaps at the midpoint when tile is invisible
+        final scaleY = t <= 0.5 ? (1.0 - t * 2) : ((t - 0.5) * 2);
+        final displayStatus = t > 0.5 ? widget.status : _displayStatus;
+        final bounceScale = 1.0 + b * 0.1;
 
         return Transform(
-          transform: Matrix4.identity()
-            ..setEntry(3, 2, 0.001)
-            ..rotateX(angle)
-            ..scale(scale, scale),
+          transform: Matrix4.diagonal3Values(bounceScale, scaleY * bounceScale, 1.0),
           alignment: Alignment.center,
-          child: Transform(
-            transform: Matrix4.identity()
-              ..rotateX(isShowingBack ? pi : 0),
-            alignment: Alignment.center,
-            child: _buildTile(displayStatus),
-          ),
+          child: _buildTile(displayStatus),
         );
       },
     );
@@ -179,9 +161,8 @@ class _GameTileState extends State<GameTile>
     final isColored = displayStatus == LetterStatus.correct ||
         displayStatus == LetterStatus.present ||
         displayStatus == LetterStatus.absent;
-    final textColor = isColored
-        ? Colors.white
-        : (widget.isDark ? Colors.white : Colors.black);
+    final textColor =
+        isColored ? Colors.white : (widget.isDark ? Colors.white : Colors.black);
 
     return Container(
       width: widget.size,
