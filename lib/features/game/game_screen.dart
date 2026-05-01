@@ -199,6 +199,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             child: GameBoard(
                               gameState: state,
                               isDark: isDark,
+                              classicMode: widget.config.mode == GameMode.classic,
                             ),
                           ),
                         ),
@@ -206,7 +207,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: GameKeyboard(
-                          keyboardState: state.keyboardState,
+                          // Classic mode: no per-key color hints (would reveal info)
+                          keyboardState: widget.config.mode == GameMode.classic
+                              ? {}
+                              : state.keyboardState,
                           isDark: isDark,
                           disabled: state.isFinished,
                           onKey: (letter) => ref
@@ -241,15 +245,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               Positioned.fill(
                 child: GameResultOverlay(
                   gameState: state,
-                  showPlayAgain: widget.config.mode == GameMode.practice,
+                  showPlayAgain: widget.config.mode == GameMode.practice ||
+                      widget.config.mode == GameMode.classic,
                   onHome: () => context.go('/'),
                   onPlayAgain: () {
                     final newWord =
                         WordService.getRandomWord(widget.config.wordLength);
+                    final isClassic = widget.config.mode == GameMode.classic;
                     context.pushReplacement(
-                      '/practice/game',
+                      isClassic ? '/classic/game' : '/practice/game',
                       extra: GameConfig(
-                        mode: GameMode.practice,
+                        mode: widget.config.mode,
                         wordLength: widget.config.wordLength,
                         targetWord: newWord,
                       ),
@@ -273,6 +279,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         return 'PUZZLE';
       case GameMode.duel:
         return 'DUEL';
+      case GameMode.classic:
+        return 'CLASSIC';
     }
   }
 }

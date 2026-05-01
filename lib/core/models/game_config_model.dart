@@ -1,4 +1,4 @@
-enum GameMode { daily, practice, puzzle, duel }
+enum GameMode { daily, practice, puzzle, duel, classic }
 
 class GameConfig {
   final GameMode mode;

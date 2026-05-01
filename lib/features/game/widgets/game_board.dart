@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../core/models/game_state_model.dart';
 import '../../../core/models/letter_model.dart';
 import 'game_tile.dart';
@@ -8,6 +10,7 @@ class GameBoard extends StatefulWidget {
   final double? tileSize;
   final bool isDark;
   final bool compact;
+  final bool classicMode;
 
   const GameBoard({
     super.key,
@@ -15,6 +18,7 @@ class GameBoard extends StatefulWidget {
     this.tileSize,
     this.isDark = true,
     this.compact = false,
+    this.classicMode = false,
   });
 
   @override
@@ -44,49 +48,90 @@ class _GameBoardState extends State<GameBoard> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Use available width from parent constraint, not screen width.
-        // This respects the MaxWidthView wrapper on web/iPad.
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
-            : 380.0; // safe fallback
+            : 380.0;
+
+        // In classic mode we need space for count boxes (3 boxes × 28px + gaps)
+        final countBoxWidth = widget.classicMode ? 100.0 : 0.0;
 
         double tileSize;
         if (widget.tileSize != null) {
           tileSize = widget.tileSize!;
         } else if (widget.compact) {
-          // Two boards side-by-side → half the available space minus divider
           final boardWidth = (availableWidth - 20) / 2;
           tileSize = ((boardWidth - (wordLength - 1) * gap) / wordLength)
               .clamp(24.0, 46.0);
         } else {
-          tileSize = ((availableWidth - 32 - (wordLength - 1) * gap) / wordLength)
+          tileSize = ((availableWidth - 32 - countBoxWidth - (wordLength - 1) * gap) / wordLength)
               .clamp(44.0, 68.0);
         }
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(maxGuesses, (row) {
+            final rowTiles = state.board[row];
+            final isSubmitted = rowTiles.any((e) =>
+                e.status == LetterStatus.correct ||
+                e.status == LetterStatus.present ||
+                e.status == LetterStatus.absent);
+            final shouldAnimate = row == _lastAnimatedRow;
+
             return Padding(
               padding: EdgeInsets.only(bottom: gap),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(wordLength, (col) {
-                  final entry = state.board[row][col];
-                  final shouldAnimate = row == _lastAnimatedRow;
-                  return Padding(
-                    padding: EdgeInsets.only(
-                        right: col < wordLength - 1 ? gap : 0),
-                    child: GameTile(
-                      key: ValueKey('tile_${row}_$col'),
-                      letter: entry.letter,
-                      status: entry.status,
-                      size: tileSize,
-                      animate: shouldAnimate,
-                      animationDelay: col * 100,
-                      isDark: widget.isDark,
+                children: [
+                  // Tiles
+                  ...List.generate(wordLength, (col) {
+                    final entry = rowTiles[col];
+                    // In classic mode, submitted tiles all show as gray
+                    final displayStatus = (widget.classicMode && isSubmitted)
+                        ? LetterStatus.absent
+                        : entry.status;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                          right: col < wordLength - 1 ? gap : 0),
+                      child: GameTile(
+                        key: ValueKey('tile_${row}_$col'),
+                        letter: entry.letter,
+                        status: displayStatus,
+                        size: tileSize,
+                        animate: shouldAnimate && !widget.classicMode,
+                        animationDelay: col * 100,
+                        isDark: widget.isDark,
+                      ),
+                    );
+                  }),
+
+                  // Count boxes in classic mode (only for submitted rows)
+                  if (widget.classicMode && isSubmitted) ...[
+                    const SizedBox(width: 10),
+                    _CountBox(
+                      count: rowTiles
+                          .where((e) => e.status == LetterStatus.correct)
+                          .length,
+                      color: AppColors.correct,
+                      size: tileSize.clamp(28.0, 36.0),
                     ),
-                  );
-                }),
+                    const SizedBox(width: 4),
+                    _CountBox(
+                      count: rowTiles
+                          .where((e) => e.status == LetterStatus.present)
+                          .length,
+                      color: AppColors.present,
+                      size: tileSize.clamp(28.0, 36.0),
+                    ),
+                    const SizedBox(width: 4),
+                    _CountBox(
+                      count: rowTiles
+                          .where((e) => e.status == LetterStatus.absent)
+                          .length,
+                      color: const Color(0xFFE74C3C),
+                      size: tileSize.clamp(28.0, 36.0),
+                    ),
+                  ],
+                ],
               ),
             );
           }),
@@ -96,13 +141,41 @@ class _GameBoardState extends State<GameBoard> {
   }
 }
 
-/// Read-only board for showing opponent's guesses in duel mode.
+class _CountBox extends StatelessWidget {
+  final int count;
+  final Color color;
+  final double size;
+
+  const _CountBox({required this.count, required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      color: color,
+      child: Center(
+        child: Text(
+          '$count',
+          style: GoogleFonts.inter(
+            fontSize: size * 0.45,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Read-only board for showing opponent's guesses in duel/classic mode.
 class ReadOnlyBoard extends StatelessWidget {
   final int wordLength;
   final int maxGuesses;
   final List<({String word, List<LetterStatus> statuses})> guesses;
   final bool isDark;
   final double? tileSize;
+  final bool classicMode;
 
   const ReadOnlyBoard({
     super.key,
@@ -111,6 +184,7 @@ class ReadOnlyBoard extends StatelessWidget {
     required this.guesses,
     this.isDark = true,
     this.tileSize,
+    this.classicMode = false,
   });
 
   @override
@@ -122,8 +196,9 @@ class ReadOnlyBoard extends StatelessWidget {
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 160.0;
+        final countBoxWidth = classicMode ? 70.0 : 0.0;
         final size = tileSize ??
-            ((availableWidth - (wordLength - 1) * gap) / wordLength)
+            ((availableWidth - countBoxWidth - (wordLength - 1) * gap) / wordLength)
                 .clamp(24.0, 46.0);
 
         return Column(
@@ -133,26 +208,64 @@ class ReadOnlyBoard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 3),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(wordLength, (col) {
-                  LetterStatus status = LetterStatus.empty;
-                  String letter = '';
-                  if (row < guesses.length) {
-                    status = guesses[row].statuses[col];
-                    letter = guesses[row].word[col];
-                  }
-                  return Padding(
-                    padding: EdgeInsets.only(
-                        right: col < wordLength - 1 ? gap : 0),
-                    child: GameTile(
-                      key: ValueKey('opp_${row}_$col'),
-                      letter: letter,
-                      status: status,
-                      size: size,
-                      animate: false,
-                      isDark: isDark,
+                children: [
+                  ...List.generate(wordLength, (col) {
+                    LetterStatus status = LetterStatus.empty;
+                    String letter = '';
+                    if (row < guesses.length) {
+                      status = guesses[row].statuses[col];
+                      letter = guesses[row].word[col];
+                    }
+                    final displayStatus = (classicMode &&
+                            (status == LetterStatus.correct ||
+                                status == LetterStatus.present ||
+                                status == LetterStatus.absent))
+                        ? LetterStatus.absent
+                        : status;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                          right: col < wordLength - 1 ? gap : 0),
+                      child: GameTile(
+                        key: ValueKey('opp_${row}_$col'),
+                        letter: letter,
+                        status: displayStatus,
+                        size: size,
+                        animate: false,
+                        isDark: isDark,
+                      ),
+                    );
+                  }),
+
+                  if (classicMode && row < guesses.length) ...[
+                    const SizedBox(width: 4),
+                    _CountBox(
+                      count: guesses[row]
+                          .statuses
+                          .where((s) => s == LetterStatus.correct)
+                          .length,
+                      color: AppColors.correct,
+                      size: size.clamp(20.0, 28.0),
                     ),
-                  );
-                }),
+                    const SizedBox(width: 2),
+                    _CountBox(
+                      count: guesses[row]
+                          .statuses
+                          .where((s) => s == LetterStatus.present)
+                          .length,
+                      color: AppColors.present,
+                      size: size.clamp(20.0, 28.0),
+                    ),
+                    const SizedBox(width: 2),
+                    _CountBox(
+                      count: guesses[row]
+                          .statuses
+                          .where((s) => s == LetterStatus.absent)
+                          .length,
+                      color: const Color(0xFFE74C3C),
+                      size: size.clamp(20.0, 28.0),
+                    ),
+                  ],
+                ],
               ),
             );
           }),

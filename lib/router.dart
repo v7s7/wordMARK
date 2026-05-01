@@ -7,6 +7,10 @@ import 'features/duel/duel_game_screen.dart';
 import 'features/duel/duel_home_screen.dart';
 import 'features/duel/join_duel_screen.dart';
 import 'features/game/game_screen.dart';
+import 'features/classic/classic_create_screen.dart';
+import 'features/classic/classic_home_screen.dart';
+import 'features/classic/classic_join_screen.dart';
+import 'features/classic/classic_online_game_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/practice/practice_setup_screen.dart';
 import 'features/puzzles/puzzle_pack_screen.dart';
@@ -121,6 +125,50 @@ final router = GoRouter(
               isHost: s.uri.queryParameters['isHost'] == 'true',
             ),
           ),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/classic',
+      pageBuilder: (c, s) => _slidePage(c, s, const ClassicHomeScreen()),
+      routes: [
+        GoRoute(
+          path: 'game',
+          pageBuilder: (c, s) {
+            final config = s.extra as GameConfig?;
+            if (config == null) return _slidePage(c, s, const ClassicHomeScreen());
+            return _slidePage(c, s, GameScreen(config: config));
+          },
+        ),
+        GoRoute(
+          path: 'online',
+          routes: [
+            GoRoute(
+              path: 'create',
+              pageBuilder: (c, s) {
+                final length =
+                    int.tryParse(s.uri.queryParameters['length'] ?? '5') ?? 5;
+                return _slidePage(
+                    c, s, ClassicCreateScreen(initialLength: length));
+              },
+            ),
+            GoRoute(
+              path: 'join',
+              pageBuilder: (c, s) =>
+                  _slidePage(c, s, const ClassicJoinScreen()),
+            ),
+            GoRoute(
+              path: 'game/:duelId',
+              pageBuilder: (c, s) => _slidePage(
+                c,
+                s,
+                ClassicOnlineGameScreen(
+                  duelId: s.pathParameters['duelId']!,
+                  isHost: s.uri.queryParameters['isHost'] == 'true',
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     ),
