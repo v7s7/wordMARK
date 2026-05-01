@@ -111,12 +111,16 @@ class FirestoreService {
   // ─── USER STATS ────────────────────────────────────────────────────────────
 
   Future<UserStats> getUserStats(String userId) async {
-    final snap = await _db.collection('users').doc(userId).get();
-    if (!snap.exists || snap.data() == null) return const UserStats();
-    final data = snap.data()!;
-    final statsData = data['stats'] as Map<String, dynamic>?;
-    if (statsData == null) return const UserStats();
-    return UserStats.fromJson(statsData);
+    try {
+      final snap = await _db.collection('users').doc(userId).get();
+      if (!snap.exists || snap.data() == null) return const UserStats();
+      final data = snap.data()!;
+      final statsData = data['stats'] as Map<String, dynamic>?;
+      if (statsData == null) return const UserStats();
+      return UserStats.fromJson(statsData);
+    } catch (_) {
+      return const UserStats();
+    }
   }
 
   Future<void> updateStats({
@@ -126,25 +130,26 @@ class FirestoreService {
     required int guessCount,
     required UserStats currentStats,
   }) async {
-    final prev = currentStats.forLength(wordLength);
-    final newStreak = won ? prev.currentStreak + 1 : 0;
-    final distribution = Map<int, int>.from(prev.guessDistribution);
-    if (won) {
-      distribution[guessCount] = (distribution[guessCount] ?? 0) + 1;
-    }
-    final updated = prev.copyWith(
-      gamesPlayed: prev.gamesPlayed + 1,
-      wins: won ? prev.wins + 1 : prev.wins,
-      currentStreak: newStreak,
-      maxStreak:
-          newStreak > prev.maxStreak ? newStreak : prev.maxStreak,
-      guessDistribution: distribution,
-    );
-    final newStats = currentStats.updateForLength(wordLength, updated);
-    await _db.collection('users').doc(userId).set(
-      {'stats': newStats.toJson()},
-      SetOptions(merge: true),
-    );
+    try {
+      final prev = currentStats.forLength(wordLength);
+      final newStreak = won ? prev.currentStreak + 1 : 0;
+      final distribution = Map<int, int>.from(prev.guessDistribution);
+      if (won) {
+        distribution[guessCount] = (distribution[guessCount] ?? 0) + 1;
+      }
+      final updated = prev.copyWith(
+        gamesPlayed: prev.gamesPlayed + 1,
+        wins: won ? prev.wins + 1 : prev.wins,
+        currentStreak: newStreak,
+        maxStreak: newStreak > prev.maxStreak ? newStreak : prev.maxStreak,
+        guessDistribution: distribution,
+      );
+      final newStats = currentStats.updateForLength(wordLength, updated);
+      await _db.collection('users').doc(userId).set(
+        {'stats': newStats.toJson()},
+        SetOptions(merge: true),
+      );
+    } catch (_) {}
   }
 
   // ─── DAILY COMPLETIONS ─────────────────────────────────────────────────────
@@ -154,11 +159,15 @@ class FirestoreService {
 
   Future<bool> hasCompletedDaily(
       String userId, String date, int length) async {
-    final snap = await _db
-        .collection('daily_completions')
-        .doc(_dailyDocId(userId, date, length))
-        .get();
-    return snap.exists;
+    try {
+      final snap = await _db
+          .collection('daily_completions')
+          .doc(_dailyDocId(userId, date, length))
+          .get();
+      return snap.exists;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> recordDailyCompletion({
@@ -168,36 +177,44 @@ class FirestoreService {
     required bool won,
     required int guessCount,
   }) async {
-    await _db
-        .collection('daily_completions')
-        .doc(_dailyDocId(userId, date, length))
-        .set({
-      'userId': userId,
-      'date': date,
-      'wordLength': length,
-      'won': won,
-      'guessCount': guessCount,
-      'completedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _db
+          .collection('daily_completions')
+          .doc(_dailyDocId(userId, date, length))
+          .set({
+        'userId': userId,
+        'date': date,
+        'wordLength': length,
+        'won': won,
+        'guessCount': guessCount,
+        'completedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
   }
 
   // ─── PUZZLE COMPLETIONS ────────────────────────────────────────────────────
 
   Future<Set<String>> getCompletedPuzzles(String userId) async {
-    final snap = await _db
-        .collection('users')
-        .doc(userId)
-        .collection('puzzles')
-        .get();
-    return snap.docs.map((d) => d.id).toSet();
+    try {
+      final snap = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('puzzles')
+          .get();
+      return snap.docs.map((d) => d.id).toSet();
+    } catch (_) {
+      return {};
+    }
   }
 
   Future<void> markPuzzleComplete(String userId, String puzzleId) async {
-    await _db
-        .collection('users')
-        .doc(userId)
-        .collection('puzzles')
-        .doc(puzzleId)
-        .set({'completedAt': FieldValue.serverTimestamp()});
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('puzzles')
+          .doc(puzzleId)
+          .set({'completedAt': FieldValue.serverTimestamp()});
+    } catch (_) {}
   }
 }

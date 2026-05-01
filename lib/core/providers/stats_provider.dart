@@ -24,9 +24,10 @@ class UserStatsNotifier extends StateNotifier<UserStats> {
   Future<void> _load() async {
     final uid = _ref.read(currentUserIdProvider);
     if (uid == null) return;
-    final stats =
-        await _ref.read(firestoreServiceProvider).getUserStats(uid);
-    state = stats;
+    try {
+      final stats = await _ref.read(firestoreServiceProvider).getUserStats(uid);
+      state = stats;
+    } catch (_) {}
   }
 
   Future<void> recordResult({
@@ -36,13 +37,15 @@ class UserStatsNotifier extends StateNotifier<UserStats> {
   }) async {
     final uid = _ref.read(currentUserIdProvider);
     if (uid == null) return;
-    await _ref.read(firestoreServiceProvider).updateStats(
-          userId: uid,
-          wordLength: wordLength,
-          won: won,
-          guessCount: guessCount,
-          currentStats: state,
-        );
-    await _load();
+    try {
+      await _ref.read(firestoreServiceProvider).updateStats(
+            userId: uid,
+            wordLength: wordLength,
+            won: won,
+            guessCount: guessCount,
+            currentStats: state,
+          );
+      await _load();
+    } catch (_) {}
   }
 }
