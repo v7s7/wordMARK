@@ -141,8 +141,10 @@ class _GameResultOverlayState extends State<GameResultOverlay> {
                     ),
                     const SizedBox(height: 20),
                   ],
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
                       if (widget.showPlayAgain)
                         _ActionButton(
@@ -151,14 +153,12 @@ class _GameResultOverlayState extends State<GameResultOverlay> {
                           color: AppColors.correct,
                           onTap: widget.onPlayAgain,
                         ),
-                      if (widget.showPlayAgain) const SizedBox(width: 12),
                       _ActionButton(
                         label: 'Share',
                         icon: Icons.share,
                         color: const Color(0xFF565758),
                         onTap: () => Share.share(_buildShareText()),
                       ),
-                      if (widget.onHome != null) const SizedBox(width: 12),
                       if (widget.onHome != null)
                         _ActionButton(
                           label: 'Home',
