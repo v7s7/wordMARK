@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/game_config_model.dart';
 import '../../core/services/word_service.dart';
+import '../../core/widgets/max_width_view.dart';
 
 class PracticeSetupScreen extends StatefulWidget {
   const PracticeSetupScreen({super.key});
@@ -39,7 +40,7 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: MaxWidthView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

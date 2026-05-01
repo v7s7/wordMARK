@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/widgets/max_width_view.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -21,6 +22,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
+        child: MaxWidthView(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -123,6 +125,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

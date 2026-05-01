@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/game_config_model.dart';
 import '../../core/services/word_service.dart';
+import '../../core/widgets/max_width_view.dart';
 
 class DailyScreen extends ConsumerWidget {
   const DailyScreen({super.key});
@@ -25,7 +26,7 @@ class DailyScreen extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: MaxWidthView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

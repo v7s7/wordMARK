@@ -6,14 +6,14 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/game_config_model.dart';
 import '../../core/models/game_state_model.dart';
-import '../../core/providers/game_provider.dart';
-import '../../core/providers/stats_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/firestore_provider.dart';
+import '../../core/providers/game_provider.dart';
+import '../../core/providers/stats_provider.dart';
 import '../../core/services/word_service.dart';
-import 'widgets/game_board.dart';
-import 'widgets/game_keyboard.dart';
-import 'widgets/game_result_overlay.dart';
+import '../game/widgets/game_board.dart';
+import '../game/widgets/game_keyboard.dart';
+import '../game/widgets/game_result_overlay.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   final GameConfig config;
@@ -26,13 +26,20 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class _GameScreenState extends ConsumerState<GameScreen> {
   String? _toastMessage;
-  bool _resultRecorded = false;
   bool _statsRecorded = false;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _ensureAuth();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _ensureAuth() async {
@@ -59,7 +66,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           guessCount: state.guessesUsed,
         );
 
-    // Record daily completion if in daily mode
     if (state.config.mode == GameMode.daily) {
       final today = DateTime.now();
       final dateStr =
@@ -73,12 +79,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           );
     }
 
-    // Record puzzle completion
     if (state.config.mode == GameMode.puzzle && state.config.puzzleId != null) {
-      await ref.read(firestoreServiceProvider).markPuzzleComplete(
-            uid,
-            state.config.puzzleId!,
-          );
+      await ref
+          .read(firestoreServiceProvider)
+          .markPuzzleComplete(uid, state.config.puzzleId!);
     }
   }
 
@@ -90,16 +94,42 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       _showToast(error);
     } else {
       HapticFeedback.lightImpact();
-      // Stop animation flag after animation completes
       Future.delayed(
         Duration(milliseconds: state.config.wordLength * 100 + 500),
         () {
-          if (mounted) {
-            notifier.stopAnimation();
-          }
+          if (mounted) notifier.stopAnimation();
         },
       );
     }
+  }
+
+  // Handle physical keyboard input (web + desktop)
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final state = ref.read(gameProvider(widget.config));
+    if (state.isFinished) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.enter) {
+      _handleSubmit(state);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace ||
+        key == LogicalKeyboardKey.delete) {
+      ref.read(gameProvider(widget.config).notifier).deleteLetter();
+      return KeyEventResult.handled;
+    }
+
+    final char = event.character;
+    if (char != null && char.isNotEmpty) {
+      final upper = char.toUpperCase();
+      if (RegExp(r'^[A-Z]$').hasMatch(upper)) {
+        ref.read(gameProvider(widget.config).notifier).addLetter(upper);
+        return KeyEventResult.handled;
+      }
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -107,125 +137,128 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final state = ref.watch(gameProvider(widget.config));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Record result when game finishes
     if (state.isFinished && !_statsRecorded) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _recordResult(state));
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_modeTitle(widget.config.mode)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.correct.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.correct.withOpacity(0.4)),
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_modeTitle(widget.config.mode)),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.correct.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: AppColors.correct.withOpacity(0.4)),
+                ),
+                child: Text(
+                  '${widget.config.wordLength}L',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.correct,
+                  ),
+                ),
               ),
-              child: Text(
-                '${widget.config.wordLength}L',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.correct,
+            ],
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: state.currentRow / state.config.maxGuesses,
+                        backgroundColor: Colors.transparent,
+                        color: AppColors.correct.withOpacity(0.6),
+                        minHeight: 2,
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            child: GameBoard(
+                              gameState: state,
+                              isDark: isDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: GameKeyboard(
+                          keyboardState: state.keyboardState,
+                          isDark: isDark,
+                          disabled: state.isFinished,
+                          onKey: (letter) => ref
+                              .read(gameProvider(widget.config).notifier)
+                              .addLetter(letter),
+                          onDelete: () => ref
+                              .read(gameProvider(widget.config).notifier)
+                              .deleteLetter(),
+                          onEnter: () => _handleSubmit(state),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
+
+            // Toast
+            if (_toastMessage != null)
+              Positioned(
+                top: 70,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GameToast(
+                      key: UniqueKey(), message: _toastMessage!),
+                ),
+              ),
+
+            // Result overlay
+            if (state.isFinished)
+              Positioned.fill(
+                child: GameResultOverlay(
+                  gameState: state,
+                  showPlayAgain: widget.config.mode == GameMode.practice,
+                  onHome: () => context.go('/'),
+                  onPlayAgain: () {
+                    final newWord =
+                        WordService.getRandomWord(widget.config.wordLength);
+                    context.pushReplacement(
+                      '/practice/game',
+                      extra: GameConfig(
+                        mode: GameMode.practice,
+                        wordLength: widget.config.wordLength,
+                        targetWord: newWord,
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                // Progress indicator line
-                LinearProgressIndicator(
-                  value: state.currentRow / state.config.maxGuesses,
-                  backgroundColor: Colors.transparent,
-                  color: AppColors.correct.withOpacity(0.6),
-                  minHeight: 2,
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 12),
-                        GameBoard(
-                          gameState: state,
-                          isDark: isDark,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: GameKeyboard(
-                    keyboardState: state.keyboardState,
-                    isDark: isDark,
-                    disabled: state.isFinished,
-                    onKey: (letter) {
-                      ref
-                          .read(gameProvider(widget.config).notifier)
-                          .addLetter(letter);
-                    },
-                    onDelete: () {
-                      ref
-                          .read(gameProvider(widget.config).notifier)
-                          .deleteLetter();
-                    },
-                    onEnter: () => _handleSubmit(state),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Toast message
-          if (_toastMessage != null)
-            Positioned(
-              top: 70,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GameToast(key: UniqueKey(), message: _toastMessage!),
-              ),
-            ),
-
-          // Result overlay
-          if (state.isFinished)
-            Positioned.fill(
-              child: GameResultOverlay(
-                gameState: state,
-                showPlayAgain: widget.config.mode == GameMode.practice,
-                onHome: () => context.go('/'),
-                onPlayAgain: () {
-                  final newWord = WordService.getRandomWord(
-                    widget.config.wordLength,
-                  );
-                  context.pushReplacement(
-                    '/practice/game',
-                    extra: GameConfig(
-                      mode: GameMode.practice,
-                      wordLength: widget.config.wordLength,
-                      targetWord: newWord,
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/user_stats_model.dart';
 import '../../core/providers/stats_provider.dart';
+import '../../core/widgets/max_width_view.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
@@ -51,12 +52,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
           indicatorColor: AppColors.correct,
         ),
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: _lengths.map((length) {
-          final s = stats.forLength(length);
-          return _StatsView(stats: s, wordLength: length);
-        }).toList(),
+      body: MaxWidthView(
+        child: TabBarView(
+          controller: _tabs,
+          children: _lengths.map((length) {
+            final s = stats.forLength(length);
+            return _StatsView(stats: s, wordLength: length);
+          }).toList(),
+        ),
       ),
     );
   }
@@ -184,13 +187,14 @@ class _DistributionChart extends StatelessWidget {
         ? 1
         : distribution.values.reduce((a, b) => a > b ? a : b);
 
-    return Column(
+    return LayoutBuilder(builder: (context, constraints) {
+      return Column(
       children: List.generate(maxGuesses, (i) {
         final guess = i + 1;
         final count = distribution[guess] ?? 0;
         final barWidth = maxCount == 0
             ? 0.0
-            : (count / maxCount) * (MediaQuery.of(context).size.width - 120);
+            : (count / maxCount) * (constraints.maxWidth - 60);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
@@ -232,6 +236,7 @@ class _DistributionChart extends StatelessWidget {
           ),
         );
       }),
-    );
+      );
+    });
   }
 }

@@ -29,33 +29,51 @@ class GameKeyboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: _rows.map((row) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Scale key sizes to fit available width (max ~500px)
+        final availableWidth = constraints.maxWidth.clamp(0.0, 500.0);
+        // 10 keys per row, 9 gaps of 6px → key width
+        final keyWidth = ((availableWidth - 20 - 9 * 6) / 10).clamp(28.0, 44.0);
+        final keyHeight = (keyWidth * 1.5).clamp(44.0, 58.0);
+        final wideKeyWidth = (keyWidth * 1.5).clamp(44.0, 66.0);
+
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: row.map((key) {
-              return _KeyButton(
-                label: key,
-                status: keyboardState[key],
-                isDark: isDark,
-                disabled: disabled,
-                onTap: () {
-                  if (disabled) return;
-                  if (key == 'ENTER') {
-                    onEnter();
-                  } else if (key == '⌫') {
-                    onDelete();
-                  } else {
-                    onKey(key);
-                  }
-                },
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _rows.map((row) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: row.map((key) {
+                    final isWide = key == 'ENTER' || key == '⌫';
+                    return _KeyButton(
+                      label: key,
+                      status: keyboardState[key],
+                      isDark: isDark,
+                      disabled: disabled,
+                      width: isWide ? wideKeyWidth : keyWidth,
+                      height: keyHeight,
+                      onTap: () {
+                        if (disabled) return;
+                        if (key == 'ENTER') {
+                          onEnter();
+                        } else if (key == '⌫') {
+                          onDelete();
+                        } else {
+                          onKey(key);
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
               );
             }).toList(),
           ),
         );
-      }).toList(),
+      },
     );
   }
 }
@@ -66,6 +84,8 @@ class _KeyButton extends StatelessWidget {
   final bool isDark;
   final bool disabled;
   final VoidCallback onTap;
+  final double width;
+  final double height;
 
   const _KeyButton({
     required this.label,
@@ -73,6 +93,8 @@ class _KeyButton extends StatelessWidget {
     required this.isDark,
     required this.disabled,
     required this.onTap,
+    required this.width,
+    required this.height,
   });
 
   Color _bgColor() {
@@ -120,35 +142,24 @@ class _KeyButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: Material(
         color: _bgColor(),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(5),
         child: InkWell(
           onTap: disabled ? null : onTap,
-          borderRadius: BorderRadius.circular(4),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            width: _isWide ? 58 : 36,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-            ),
+          borderRadius: BorderRadius.circular(5),
+          child: SizedBox(
+            width: width,
+            height: height,
             child: Center(
-              child: _isWide
-                  ? Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: label == 'ENTER' ? 11 : 18,
-                        fontWeight: FontWeight.w700,
-                        color: _textColor(),
-                      ),
-                    )
-                  : Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _textColor(),
-                      ),
-                    ),
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: _isWide
+                      ? (label == 'ENTER' ? (width > 55 ? 12 : 10) : 18)
+                      : (width > 36 ? 16 : 14),
+                  fontWeight: FontWeight.w700,
+                  color: _textColor(),
+                ),
+              ),
             ),
           ),
         ),

@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/duel_model.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/duel_provider.dart';
 import '../../core/providers/firestore_provider.dart';
 import '../../core/services/word_service.dart';
 

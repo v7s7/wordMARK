@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="WordMark — Daily word challenges, puzzles, and live duels">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="WordMark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <!-- Theme color matches dark background -->
+  <meta name="theme-color" content="#121213">
+
+  <!-- Prevent text scaling -->
+  <style>
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #121213;
+      overflow: hidden;
+    }
+    /* Loading indicator */
+    #loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #121213;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #loading h1 {
+      font-family: system-ui, sans-serif;
+      font-weight: 900;
+      font-size: 36px;
+      letter-spacing: 10px;
+      color: #ffffff;
+      margin: 0;
+    }
+    .mark-tiles {
+      display: flex;
+      gap: 6px;
+    }
+    .mark-tile {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+      font-weight: 900;
+      font-size: 14px;
+      color: white;
+    }
+  </style>
+
+  <link rel="manifest" href="manifest.json">
+  <title>WordMark</title>
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+</head>
+<body>
+  <!-- Branded loading screen shown while Flutter loads -->
+  <div id="loading">
+    <h1>WORD</h1>
+    <div class="mark-tiles">
+      <div class="mark-tile" style="background:#538D4E">M</div>
+      <div class="mark-tile" style="background:#B59F3B">A</div>
+      <div class="mark-tile" style="background:#3A3A3C">R</div>
+      <div class="mark-tile" style="background:#538D4E">K</div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      document.getElementById('loading').remove();
+    });
+  </script>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

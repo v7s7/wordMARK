@@ -29,10 +29,11 @@ migrate_working_dir/
 .pub/
 /build/
 
-# Firebase
+# Firebase native config files (must be added manually per-platform)
 google-services.json
 GoogleService-Info.plist
-lib/firebase_options.dart
+# firebase_options.dart is committed with placeholder values for iOS/Android
+# Run `flutterfire configure` locally to populate real native values
 
 # Symbolication related
 app.*.symbols

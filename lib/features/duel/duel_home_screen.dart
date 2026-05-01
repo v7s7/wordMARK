@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
+import '../../core/widgets/max_width_view.dart';
 
 class DuelHomeScreen extends StatelessWidget {
   const DuelHomeScreen({super.key});
@@ -18,7 +19,7 @@ class DuelHomeScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: MaxWidthView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
